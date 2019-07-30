@@ -60,15 +60,22 @@ def read_from_file(services_file):
     with open(services_file) as f:
         content = f.readlines()
     # remove whitespace characters like `\n` at the end of each line
-    return [x.strip() for x in content]
+    return [x.strip() for x in content if x.strip() != ""]
 
 
 # Delete bloatware with PS script
 
 # Disable
 def disable_service(service):
-    os.system('sc config "{0}" start= disabled'.format(service))
-    os.system('sc stop "{0}"'.format(service))
+    logger.info('Trying to disable service "{0}"'.format(service))
+    system_srv_name = SERVICES[service]
+    logger.info('System service name "{0}"'.format(system_srv_name))
+    ret = os.system('sc config "{0}" start= disabled'.format(system_srv_name))
+    if ret != 0:
+        logger.warning("sc config returned error code {0}".format(ret))
+    ret = os.system('sc stop "{0}"'.format(system_srv_name))
+    if ret != 0:
+        logger.warning("sc stop returned error code {0}".format(ret))
 
 
 def disable_services(services_list):
@@ -107,8 +114,10 @@ def main():
     services_file = args.services_file
 
     if services_file != "":
+        logger.info("Service list loaded from file {0}".format(services_file))
         services_list = read_from_file(services_file)
     else:
+        logger.info("Default service list selected")
         services_list = default_services
 
     disable_services(services_list)
