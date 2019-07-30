@@ -1,14 +1,47 @@
 import os
-import re
 import sys
 import stat
-import shutil
 import argparse
 import logging
 import log_helper
 
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
+
+
+SERVICES = {
+    # Related to Telemetry
+    "Connected User Experiences and Telemetry": "DiagTrack",
+    "Diagnostic Policy Service": "DPS",
+    "dmwappushsvc": "dmwappushsvc",
+
+    # If you don't use Maps
+    "Downloaded Maps Manager": "MapsBroker",
+
+    # If you don't use IPv6
+    "IP Helper": "iphlpsvc",
+
+    # If you don't want remote registry
+    "Remote Registry": "RemoteRegistry",
+
+    # Safe to turn off
+    "Secondary Logon": "seclogon",
+
+    # Use anti-malware instead
+    "Security Center": "wscsvc",
+
+    # If you don't want to use touch keyboard
+    "Touch Keyboard and Handwriting Panel Service": "TabletInputService",
+
+    # Use anti-malware instead
+    "Windows Defender Service": "mpssvc",
+
+    # Safe to turn off
+    "Windows Error Reporting Service": "WerSvc",
+
+    # If you don't have scanner
+    "Windows Image Acquisition": "stisvc"
+}
 
 
 def on_rm_error(*args):
