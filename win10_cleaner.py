@@ -5,9 +5,7 @@ import argparse
 import logging
 import log_helper
 
-
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
-
 
 SERVICES = {
     # Related to Telemetry
@@ -57,9 +55,26 @@ def on_rm_error(*args):
     logger.warning("Unable to delete %s" % path)
     os.unlink(path)
 
+
+def read_from_file(services_file):
+    with open(services_file) as f:
+        content = f.readlines()
+    # remove whitespace characters like `\n` at the end of each line
+    return [x.strip() for x in content]
+
+
 # Delete bloatware with PS script
 
-# Disable services
+# Disable
+def disable_service(service):
+    os.system('sc config "{0}" start= disabled'.format(service))
+    os.system('sc stop "{0}"'.format(service))
+
+
+def disable_services(services_list):
+    for srv in services_list:
+        disable_service(srv)
+
 
 # Disable GP (API or registry)
 
@@ -68,15 +83,35 @@ def main():
     Uninstall applications based on list, or simply retrreive the list of installed applications
     :return: System return code
     """
+    default_services = ["Connected User Experiences and Telemetry",
+                        "Diagnostic Policy Service",
+                        "dmwappushsvc",
+                        "Downloaded Maps Manager",
+                        "IP Helper",
+                        "Remote Registry",
+                        "Secondary Logon",
+                        "Security Center",
+                        "Touch Keyboard and Handwriting Panel Service",
+                        "Windows Defender Service",
+                        "Windows Error Reporting Service",
+                        "Windows Image Acquisition"]
+
     parser = argparse.ArgumentParser(description='Command-line params')
-    parser.add_argument('--home',
-                        help='TODO',
-                        dest='home',
+    parser.add_argument('--services-file',
+                        help='Pass text file with newline-separated names',
+                        dest='services_file',
                         default="",
                         required=False)
 
     args = parser.parse_args()
-    home = args.home
+    services_file = args.services_file
+
+    if services_file != "":
+        services_list = read_from_file(services_file)
+    else:
+        services_list = default_services
+
+    disable_services(services_list)
 
     return 0
 
