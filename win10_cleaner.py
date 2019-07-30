@@ -168,7 +168,7 @@ def main():
         logger.info("Default service list selected")
         services_list = default_services
 
-    #disable_services(services_list)
+    disable_services(services_list)
     disable_tasks(TASKS)
 
     return 0
