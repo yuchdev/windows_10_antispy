@@ -4,6 +4,7 @@ import stat
 import argparse
 import logging
 import log_helper
+import subprocess
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
@@ -45,6 +46,16 @@ SERVICES = {
     # If you don't have scanner
     "Windows Image Acquisition": "stisvc"
 }
+
+
+TASKS = ["\\Microsoft\\Windows\\Application Experience\\Microsoft Compatibility Appraiser",
+         "\\Microsoft\\Windows\\Application Experience\\ProgramDataUpdater",
+         "\\Microsoft\\Windows\\Application Experience\\StartupAppTask",
+         "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
+         "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip"]
+
+
+POWERSHELL_COMMAND = r'C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe'
 
 
 def on_rm_error(*args):
@@ -89,6 +100,19 @@ def disable_service(service):
         logger.warning("sc stop returned error code {0}".format(ret))
 
 
+def disable_task(task_name):
+    """
+
+    :param task_name:
+    :return:
+    """
+    subprocess.Popen([POWERSHELL_COMMAND,
+                      '-ExecutionPolicy', 'Unrestricted',
+                      'Disable-ScheduledTask', '-TaskName', '"{0}"'.format(task_name)],
+                     stdout=subprocess.PIPE,
+                     stderr=subprocess.PIPE)
+
+
 def disable_services(services_list):
     """
     :param services_list: List of Human-readable service names to disable
@@ -98,7 +122,15 @@ def disable_services(services_list):
         disable_service(srv)
 
 
-# TODO: Disable GP (API or registry)
+def disable_tasks(tasks_list):
+    """
+    :param tasks_list: List of tasks in standard Scheduler format
+    \\Microsoft\\Windows\\Application Experience\\StartupAppTask
+    ""
+    :return:
+    """
+    for task in tasks_list:
+        disable_task(task)
 
 
 def main():
@@ -136,7 +168,8 @@ def main():
         logger.info("Default service list selected")
         services_list = default_services
 
-    disable_services(services_list)
+    #disable_services(services_list)
+    disable_tasks(TASKS)
 
     return 0
 
