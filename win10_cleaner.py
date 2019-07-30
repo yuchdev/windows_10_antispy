@@ -7,6 +7,11 @@ import log_helper
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
+
+"""Map human-readable service names to system name
+For example "Diagnostic Policy Service" should be addressed "DPS"
+Like "net stop DPS"
+"""
 SERVICES = {
     # Related to Telemetry
     "Connected User Experiences and Telemetry": "DiagTrack",
@@ -57,33 +62,44 @@ def on_rm_error(*args):
 
 
 def read_from_file(services_file):
+    """
+    :param services_file: File with newline-separated services list
+    :return: list of services with stripped newlines and skipped empty strings
+    """
     with open(services_file) as f:
         content = f.readlines()
     # remove whitespace characters like `\n` at the end of each line
     return [x.strip() for x in content if x.strip() != ""]
 
 
-# Delete bloatware with PS script
-
-# Disable
 def disable_service(service):
+    """
+    :param service: Human-readable service name to disable, for example "Security Center"
+    """
     logger.info('Trying to disable service "{0}"'.format(service))
     system_srv_name = SERVICES[service]
     logger.info('System service name "{0}"'.format(system_srv_name))
+
     ret = os.system('sc config "{0}" start= disabled'.format(system_srv_name))
     if ret != 0:
         logger.warning("sc config returned error code {0}".format(ret))
+
     ret = os.system('sc stop "{0}"'.format(system_srv_name))
     if ret != 0:
         logger.warning("sc stop returned error code {0}".format(ret))
 
 
 def disable_services(services_list):
+    """
+    :param services_list: List of Human-readable service names to disable
+    :return:
+    """
     for srv in services_list:
         disable_service(srv)
 
 
-# Disable GP (API or registry)
+# TODO: Disable GP (API or registry)
+
 
 def main():
     """
