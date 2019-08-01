@@ -8,9 +8,72 @@ import subprocess
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
+"""We assume hosts located there. 
+In future versions of application we will be locating Windows directory to cover all cases.
+"""
+HOSTS_FILE = "C:\\Windows\\System32\\drivers\\etc\\hosts"
 
-"""Map human-readable service names to system name
-For example "Diagnostic Policy Service" should be addressed "DPS"
+
+"""List of telemetry-relates websites to add to hosts file and disable all traffic on it.
+"""
+TELEMETRY_SERVERS = """
+0.0.0.0 vortex.data.microsoft.com
+0.0.0.0 vortex-win.data.microsoft.com
+0.0.0.0 telecommand.telemetry.microsoft.com
+0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net
+0.0.0.0 oca.telemetry.microsoft.com
+0.0.0.0 oca.telemetry.microsoft.com.nsatc.net
+0.0.0.0 sqm.telemetry.microsoft.com
+0.0.0.0 sqm.telemetry.microsoft.com.nsatc.net
+0.0.0.0 watson.telemetry.microsoft.com
+0.0.0.0 watson.telemetry.microsoft.com.nsatc.net
+0.0.0.0 redir.metaservices.microsoft.com
+0.0.0.0 choice.microsoft.com
+0.0.0.0 choice.microsoft.com.nsatc.net
+0.0.0.0 df.telemetry.microsoft.com
+0.0.0.0 reports.wes.df.telemetry.microsoft.com
+0.0.0.0 wes.df.telemetry.microsoft.com
+0.0.0.0 services.wes.df.telemetry.microsoft.com
+0.0.0.0 sqm.df.telemetry.microsoft.com
+0.0.0.0 telemetry.microsoft.com
+0.0.0.0 watson.ppe.telemetry.microsoft.com
+0.0.0.0 telemetry.appex.bing.net
+0.0.0.0 telemetry.urs.microsoft.com
+0.0.0.0 telemetry.appex.bing.net:443
+0.0.0.0 settings-sandbox.data.microsoft.com
+0.0.0.0 vortex-sandbox.data.microsoft.com
+0.0.0.0 survey.watson.microsoft.com
+0.0.0.0 watson.live.com
+0.0.0.0 watson.microsoft.com
+0.0.0.0 statsfe2.ws.microsoft.com
+0.0.0.0 corpext.msitadfs.glbdns2.microsoft.com
+0.0.0.0 compatexchange.cloudapp.net
+0.0.0.0 cs1.wpc.v0cdn.net
+0.0.0.0 a-0001.a-msedge.net
+0.0.0.0 statsfe2.update.microsoft.com.akadns.net
+0.0.0.0 sls.update.microsoft.com.akadns.net
+0.0.0.0 fe2.update.microsoft.com.akadns.net
+0.0.0.0 65.55.108.23 
+0.0.0.0 65.39.117.230
+0.0.0.0 23.218.212.69 
+0.0.0.0 134.170.30.202
+0.0.0.0 137.116.81.24
+0.0.0.0 diagnostics.support.microsoft.com
+0.0.0.0 corp.sts.microsoft.com
+0.0.0.0 statsfe1.ws.microsoft.com
+0.0.0.0 pre.footprintpredict.com
+0.0.0.0 204.79.197.200
+0.0.0.0 23.218.212.69
+0.0.0.0 i1.services.social.microsoft.com
+0.0.0.0 i1.services.social.microsoft.com.nsatc.net
+0.0.0.0 feedback.windows.com
+0.0.0.0 feedback.microsoft-hohm.com
+0.0.0.0 feedback.search.microsoft.com
+"""
+
+
+"""Map human-readable service names to system name.
+For example "Diagnostic Policy Service" should be addressed "DPS".
 Like "net stop DPS"
 """
 SERVICES = {
@@ -80,7 +143,7 @@ def read_from_file(services_file):
     with open(services_file) as f:
         content = f.readlines()
     # remove whitespace characters like `\n` at the end of each line
-    return [x.strip() for x in content if x.strip() != ""]
+    return [x.strip() for x in content if x]
 
 
 def disable_service(service):
@@ -93,11 +156,11 @@ def disable_service(service):
 
     ret = os.system('sc config "{0}" start= disabled'.format(system_srv_name))
     if ret != 0:
-        logger.warning("sc config returned error code {0}".format(ret))
+        logger.warning("sc config returned error code {0}, in some cases it's okay".format(ret))
 
     ret = os.system('sc stop "{0}"'.format(system_srv_name))
     if ret != 0:
-        logger.warning("sc stop returned error code {0}".format(ret))
+        logger.warning("sc stop returned error code {0}, in some cases it's okay".format(ret))
 
 
 def disable_task(task_name):
@@ -133,6 +196,21 @@ def disable_tasks(tasks_list):
         disable_task(task)
 
 
+def take_file_ownership():
+    """
+    """
+    ret = os.system("takeown.exe /f {0}".format(HOSTS_FILE))
+    if ret != 0:
+        logger.warning("takeown.exe returned error code {0}, unable to take ownership {1}".format(ret, HOSTS_FILE))
+
+
+def disable_telemetry_traffic():
+    """
+    """
+    with open(HOSTS_FILE, "a") as hosts_file:
+        hosts_file.write(TELEMETRY_SERVERS)
+
+
 def main():
     """
     Uninstall applications based on list, or simply retrreive the list of installed applications
@@ -152,24 +230,39 @@ def main():
                         "Windows Image Acquisition"]
 
     parser = argparse.ArgumentParser(description='Command-line params')
-    parser.add_argument('--services-file',
-                        help='Pass text file with newline-separated names',
-                        dest='services_file',
+    parser.add_argument('--stop-services',
+                        help='Stop services and tasks, providing private data transfer to Microsoft',
+                        action='store_true',
                         default="",
+                        required=False)
+    parser.add_argument('--block-telemetry-traffic',
+                        help='Block traffic to all known Microsoft servers, related to telemetry collection',
+                        action='store_true',
+                        default=False,
+                        required=False)
+    parser.add_argument('--disable-cortana',
+                        help='Disable Cortana from constant consuming system resources',
+                        action='store_true',
+                        default=False,
                         required=False)
 
     args = parser.parse_args()
-    services_file = args.services_file
 
-    if services_file != "":
-        logger.info("Service list loaded from file {0}".format(services_file))
-        services_list = read_from_file(services_file)
-    else:
-        logger.info("Default service list selected")
+    stop_services = args.stop_services
+    block_telemetry_traffic = args.block_telemetry_traffic
+    disable_cortana = args.disable_cortana
+
+    if stop_services:
         services_list = default_services
+        disable_services(services_list)
+        disable_tasks(TASKS)
 
-    disable_services(services_list)
-    disable_tasks(TASKS)
+    if block_telemetry_traffic:
+        take_file_ownership()
+        disable_telemetry_traffic()
+
+    if disable_cortana:
+        pass
 
     return 0
 
