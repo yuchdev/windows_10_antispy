@@ -1,5 +1,5 @@
-# win10_cleaner
-Cleanup Windows 10 from all bloatware and resolve privacy issues
+# Yet another Windows 10 pocket antispy script
+## Helps you to get rid of all Windows 10 bloatware and resolve privacy issues
 
 Current version performs following cleanups:
 * Disable all Telemetry and data-collecting services in Service Control Manager
