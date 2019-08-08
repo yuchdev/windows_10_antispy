@@ -5,3 +5,7 @@ Current version performs following cleanups:
 * Disable all Telemetry and data-collecting services in Service Control Manager
 * Disable data-collecting tasks in Windows Scheduler
 * Block all traffic to all known MS Telemetry servers
+
+Coming soon:
+* Disable Cortana
+* Remove **all** Metro bloatware
