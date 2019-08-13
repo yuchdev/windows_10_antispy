@@ -216,8 +216,12 @@ def disable_cortana_service():
     for p in psutil.process_iter():
         print(p.name())
         if p.name() == "SearchUI.exe":
-            print(p.exe())
-            print(p.pid())
+            cortana_path = p.exe()
+            logger.info("Cortana found at path %s" % cortana_path)
+            logger.info("Cortana PID %d" % p.pid)
+            cortana_directory, _ = os.path.split(cortana_path)
+            logger.debug("Cortana directory %s" % cortana_directory)
+            # p.kill()
 
 
 def main():
