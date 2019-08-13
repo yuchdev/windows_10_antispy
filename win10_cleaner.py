@@ -5,6 +5,7 @@ import argparse
 import logging
 import log_helper
 import subprocess
+import psutil
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
@@ -211,6 +212,13 @@ def disable_telemetry_traffic():
         hosts_file.write(TELEMETRY_SERVERS)
 
 
+def disable_cortana_service():
+    for p in psutil.process_iter():
+        print(p.name())
+        if p.name() == "SearchUI.exe":
+            print(p.exe())
+
+
 def main():
     """
     Uninstall applications based on list, or simply retrreive the list of installed applications
@@ -262,7 +270,7 @@ def main():
         disable_telemetry_traffic()
 
     if disable_cortana:
-        pass
+        disable_cortana_service()
 
     return 0
 
