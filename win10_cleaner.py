@@ -217,6 +217,7 @@ def disable_cortana_service():
         print(p.name())
         if p.name() == "SearchUI.exe":
             print(p.exe())
+            print(p.pid())
 
 
 def main():
