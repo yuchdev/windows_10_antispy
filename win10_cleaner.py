@@ -6,7 +6,6 @@ import logging
 import log_helper
 import subprocess
 import psutil
-import time
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
@@ -176,12 +175,12 @@ def disable_task(task_name):
                       'Disable-ScheduledTask', '-TaskName', '"{0}"'.format(task_name)],
                      stdout=subprocess.PIPE,
                      stderr=subprocess.PIPE)
+    logger.info('Task "{0}" disabled'.format(task_name))
 
 
 def disable_services(services_list):
     """
     :param services_list: List of Human-readable service names to disable
-    :return:
     """
     for srv in services_list:
         disable_service(srv)
@@ -200,55 +199,61 @@ def disable_tasks(tasks_list):
 
 def take_file_ownership():
     """
+    Take ownership over 'hosts' file, which is necessary to edit it even under Administrator rights
     """
     ret = os.system("takeown.exe /f {0}".format(HOSTS_FILE))
-    if ret != 0:
+    if ret == 0:
+        logger.info("Ownership of '{0}' file has been taken successfully".format(HOSTS_FILE))
+    else:
         logger.warning("takeown.exe returned error code {0}, unable to take ownership {1}".format(ret, HOSTS_FILE))
 
 
 def disable_telemetry_traffic():
     """
+    Disable all traffic to known MS Telemetry servers
     """
     with open(HOSTS_FILE, "a") as hosts_file:
         hosts_file.write(TELEMETRY_SERVERS)
+    logger.info("All traffic to MS Telemetry servers disabled")
 
 
 def find_cortana_directory(name, path):
+    """
+    :param name: Name of Cortana executable
+    :param path: Path to Windows Store applications directory
+    :return: Path to the directory contains Cortana
+    """
     for root, dirs, files in os.walk(path):
         if name in files:
             return root
 
 
-def on_terminate(proc):
-    print("process {} terminated with exit code {}".format(proc, proc.returncode))
-
-
 def disable_cortana_service():
-    renamed = False
     cortana_directory = find_cortana_directory("SearchUI.exe", "C:\\Windows\\SystemApps")
     logger.info("Cortana found at path %s" % cortana_directory)
 
     for p in psutil.process_iter():
+        # Kill auxiliary processes
         if p.name() in ["ActionUriServer.exe",
                         "PlacesServer.exe",
                         "backgroundTaskHost.exe",
                         "RemindersServer.exe",
                         "RemindersShareTargetApp.exe"]:
             cortana_path = p.exe()
-            logger.info("Auxillary process found at path {0}, PID={1}".format(cortana_path, p.pid))
+            logger.info("Auxiliary process found at path {0}, PID={1}".format(cortana_path, p.pid))
             p.kill()
 
         if p.name() == "SearchUI.exe":
+            # Kill Cortana processes
             cortana_path = p.exe()
-            logger.info("Cortana process run at path %s" % cortana_path)
-            logger.info("Cortana PID %d" % p.pid)
+            logger.info("Cortana process run at path {0}, PID={1}".format(cortana_path, p.pid))
 
             cortana_directory, _ = os.path.split(cortana_path)
             logger.debug("Cortana directory %s" % cortana_directory)
-            gone, alive = psutil.wait_procs(p, timeout=1, callback=on_terminate)
             p.kill()
+            p.wait()
 
-    # time.sleep(0.5)
+    # make it never rub again
     new_cortana_directory = cortana_directory + "_cortana_backup"            
     os.rename(cortana_directory, new_cortana_directory)
     logger.debug("New Cortana directory %s" % new_cortana_directory)
