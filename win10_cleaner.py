@@ -289,7 +289,10 @@ def main():
                         default=False,
                         required=False)
     parser.add_argument('--disable-cortana',
-                        help='Disable Cortana from constant consuming system resources',
+                        help='Disable Cortana from constant consuming system resources. '
+                             'Warning! Disabling Cortana may not be reliable function, '
+                             'it does not work during updates or other housekeeping. '
+                             'In case of access failure try after update finished/reboot/etc',
                         action='store_true',
                         default=False,
                         required=False)
