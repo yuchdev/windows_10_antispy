@@ -6,6 +6,7 @@ import logging
 import log_helper
 import subprocess
 import psutil
+import time
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
@@ -213,15 +214,26 @@ def disable_telemetry_traffic():
 
 
 def disable_cortana_service():
+    renamed = False
     for p in psutil.process_iter():
-        print(p.name())
-        if p.name() == "SearchUI.exe":
+        if p.name() in ["ActionUriServer.exe",
+                        "SearchUI.exe",
+                        "PlacesServer.exe",
+                        "RemindersServer.exe",
+                        "RemindersShareTargetApp.exe"]:
             cortana_path = p.exe()
             logger.info("Cortana found at path %s" % cortana_path)
             logger.info("Cortana PID %d" % p.pid)
+
             cortana_directory, _ = os.path.split(cortana_path)
             logger.debug("Cortana directory %s" % cortana_directory)
-            # p.kill()
+            p.kill()
+            renamed = True
+
+    if renamed:
+        new_cortana_directory = cortana_directory + "_cortana_backup"
+        logger.debug("New Cortana directory %s" % new_cortana_directory)
+        os.rename(cortana_directory, new_cortana_directory)
 
 
 def main():
