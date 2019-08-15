@@ -217,10 +217,15 @@ def disable_cortana_service():
     renamed = False
     for p in psutil.process_iter():
         if p.name() in ["ActionUriServer.exe",
-                        "SearchUI.exe",
                         "PlacesServer.exe",
+                        "backgroundTaskHost.exe",
                         "RemindersServer.exe",
                         "RemindersShareTargetApp.exe"]:
+            cortana_path = p.exe()
+            logger.info("Auxillary process found at path {0}, PID={1}".format(cortana_path, p.pid))
+            p.kill()
+
+        if p.name() == "SearchUI.exe":
             cortana_path = p.exe()
             logger.info("Cortana found at path %s" % cortana_path)
             logger.info("Cortana PID %d" % p.pid)
@@ -228,12 +233,9 @@ def disable_cortana_service():
             cortana_directory, _ = os.path.split(cortana_path)
             logger.debug("Cortana directory %s" % cortana_directory)
             p.kill()
-            renamed = True
-
-    if renamed:
-        new_cortana_directory = cortana_directory + "_cortana_backup"
-        logger.debug("New Cortana directory %s" % new_cortana_directory)
-        os.rename(cortana_directory, new_cortana_directory)
+            new_cortana_directory = cortana_directory + "_cortana_backup"            
+            os.rename(cortana_directory, new_cortana_directory)
+            logger.debug("New Cortana directory %s" % new_cortana_directory)
 
 
 def main():
