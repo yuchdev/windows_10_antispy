@@ -213,8 +213,21 @@ def disable_telemetry_traffic():
         hosts_file.write(TELEMETRY_SERVERS)
 
 
+def find_cortana_directory(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return root
+
+
+def on_terminate(proc):
+    print("process {} terminated with exit code {}".format(proc, proc.returncode))
+
+
 def disable_cortana_service():
     renamed = False
+    cortana_directory = find_cortana_directory("SearchUI.exe", "C:\\Windows\\SystemApps")
+    logger.info("Cortana found at path %s" % cortana_directory)
+
     for p in psutil.process_iter():
         if p.name() in ["ActionUriServer.exe",
                         "PlacesServer.exe",
@@ -227,15 +240,18 @@ def disable_cortana_service():
 
         if p.name() == "SearchUI.exe":
             cortana_path = p.exe()
-            logger.info("Cortana found at path %s" % cortana_path)
+            logger.info("Cortana process run at path %s" % cortana_path)
             logger.info("Cortana PID %d" % p.pid)
 
             cortana_directory, _ = os.path.split(cortana_path)
             logger.debug("Cortana directory %s" % cortana_directory)
+            gone, alive = psutil.wait_procs(p, timeout=1, callback=on_terminate)
             p.kill()
-            new_cortana_directory = cortana_directory + "_cortana_backup"            
-            os.rename(cortana_directory, new_cortana_directory)
-            logger.debug("New Cortana directory %s" % new_cortana_directory)
+
+    # time.sleep(0.5)
+    new_cortana_directory = cortana_directory + "_cortana_backup"            
+    os.rename(cortana_directory, new_cortana_directory)
+    logger.debug("New Cortana directory %s" % new_cortana_directory)
 
 
 def main():
