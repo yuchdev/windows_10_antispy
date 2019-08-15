@@ -14,9 +14,51 @@ In future versions of application we will be locating Windows directory to cover
 """
 HOSTS_FILE = "C:\\Windows\\System32\\drivers\\etc\\hosts"
 
+"""List of Windows Metro applications to uninstall (edit it to adjust your preferences)"""
+DEFAULT_REMOVE_UWP = [
+    'Microsoft.MicrosoftEdge',
+    'Microsoft.Windows.ContentDeliveryManager',
+    'Microsoft.Windows.CloudExperienceHost',
+    'Microsoft.Win32WebViewHost',
+    'Microsoft.XboxGameCallableUI',
+    'Microsoft.Windows.SecureAssessmentBrowser',
+    'Microsoft.Windows.SecHealthUI',
+    'Microsoft.Windows.PeopleExperienceHost',
+    'Microsoft.Windows.XGpuEjectDialog',
+    'Microsoft.Windows.ParentalControls',
+    'Microsoft.Windows.NarratorQuickStart',
+    'Microsoft.BioEnrollment',
+    'Microsoft.Wallet',
+    'Microsoft.WebpImageExtension',
+    'Microsoft.XboxSpeechToTextOverlay',
+    'Microsoft.Advertising.Xaml',
+    'Microsoft.MicrosoftEdgeDevToolsClient',
+    'Microsoft.GetHelp',
+    'Microsoft.ZuneMusic',
+    'Microsoft.ScreenSketch',
+    'Microsoft.Appconnector',
+    'Microsoft.People',
+    'Microsoft.HEIFImageExtension',
+    'Microsoft.WebMediaExtensions',
+    'Microsoft.Messaging',
+    'Microsoft.VP9VideoExtensions',
+    'Microsoft.Windows.Photos',
+    'Microsoft.XboxIdentityProvider',
+    'Microsoft.Windows.Cortana',
+    'Microsoft.XboxGameOverlay',
+    'Microsoft.MicrosoftStickyNotes',
+    'Microsoft.XboxApp',
+    'Microsoft.MSPaint',
+    'Microsoft.XboxGamingOverlay',
+    'Microsoft.WindowsMaps',
+    'Microsoft.WindowsSoundRecorder',
+    'Microsoft.3DBuilder',
+    'Microsoft.WindowsAlarms',
+    'microsoft.windowscommunicationsapps',
+    'Microsoft.WindowsCalculator',
+    'Microsoft.Microsoft3DViewer']
 
-"""List of telemetry-relates websites to add to hosts file and disable all traffic on it.
-"""
+"""List of telemetry-relates websites to add to hosts file and disable all traffic on it."""
 TELEMETRY_SERVERS = """
 0.0.0.0 vortex.data.microsoft.com
 0.0.0.0 vortex-win.data.microsoft.com
@@ -72,7 +114,6 @@ TELEMETRY_SERVERS = """
 0.0.0.0 feedback.search.microsoft.com
 """
 
-
 """Map human-readable service names to system name.
 For example "Diagnostic Policy Service" should be addressed "DPS".
 Like "net stop DPS"
@@ -111,13 +152,11 @@ SERVICES = {
     "Windows Image Acquisition": "stisvc"
 }
 
-
 TASKS = ["\\Microsoft\\Windows\\Application Experience\\Microsoft Compatibility Appraiser",
          "\\Microsoft\\Windows\\Application Experience\\ProgramDataUpdater",
          "\\Microsoft\\Windows\\Application Experience\\StartupAppTask",
          "\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator",
          "\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip"]
-
 
 POWERSHELL_COMMAND = r'C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe'
 
@@ -166,7 +205,6 @@ def disable_service(service):
 
 def disable_task(task_name):
     """
-
     :param task_name:
     :return:
     """
@@ -254,9 +292,65 @@ def disable_cortana_service():
             p.wait()
 
     # make it never rub again
-    new_cortana_directory = cortana_directory + "_cortana_backup"            
+    new_cortana_directory = cortana_directory + "_cortana_backup"
     os.rename(cortana_directory, new_cortana_directory)
     logger.debug("New Cortana directory %s" % new_cortana_directory)
+
+
+class ApplicationsListParser:
+
+    def __init__(self):
+        self.output_cache = []
+        self.applications_list = {}
+        self.__read_bloatware_apps()
+
+    def __push_application(self):
+        if len(self.output_cache) == 0:
+            return
+        self.applications_list[self.output_cache[0]] = self.output_cache[1]
+        self.output_cache.clear()
+
+    def __parse_string(self, output):
+        if output == "":
+            self.__push_application()
+        splitted_string = output.split(':', 2)
+        if splitted_string[0] == "Name":
+            self.output_cache.append(splitted_string[1])
+        if splitted_string[0] == "PackageFullName":
+            self.output_cache.append(splitted_string[1])
+
+    def __read_bloatware_apps(self):
+        process = subprocess.Popen([POWERSHELL_COMMAND, '-ExecutionPolicy', 'Unrestricted',
+                                    'Get-AppXPackage -User atatat'],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+
+        for line in iter(process.stdout.readline, b''):
+            self.__parse_string(line.decode('utf-8').rstrip().replace(" ", ""))
+        process.communicate()
+
+    def list_bloatware_apps(self):
+        """
+        List all Windows Metro applications to choose what to uninstall
+        Uses "Get-AppXPackage -User" PowerShell command
+        After picking up applications edit DEFAULT_REMOVE_UWP list in the beginning of file
+        """
+        for application_name in self.applications_list.keys():
+            print(application_name)
+
+    @staticmethod
+    def __uninstall_metro_app(app_readable_name, app_full_name):
+        subprocess.Popen([POWERSHELL_COMMAND,
+                          '-ExecutionPolicy', 'Unrestricted',
+                          'Remove-AppxPackage', '"{0}"'.format(app_full_name)],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+        logger.info('Application "{0}" uninstalled'.format(app_readable_name))
+
+    def uninstall_bloatware_apps(self):
+        for app_readable_name, app_full_name in self.applications_list.items():
+            if app_readable_name in DEFAULT_REMOVE_UWP:
+                self.__uninstall_metro_app(app_readable_name, app_full_name)
 
 
 def main():
@@ -296,24 +390,29 @@ def main():
                         action='store_true',
                         default=False,
                         required=False)
+    parser.add_argument('--uninstall-bloatware',
+                        help='Uninstall unnecessary UWP Windows Metro applications, coming with the Windows 10.',
+                        action='store_true',
+                        default=False,
+                        required=False)
 
     args = parser.parse_args()
 
-    stop_services = args.stop_services
-    block_telemetry_traffic = args.block_telemetry_traffic
-    disable_cortana = args.disable_cortana
-
-    if stop_services:
+    if args.stop_services:
         services_list = default_services
         disable_services(services_list)
         disable_tasks(TASKS)
 
-    if block_telemetry_traffic:
+    if args.block_telemetry_traffic:
         take_file_ownership()
         disable_telemetry_traffic()
 
-    if disable_cortana:
+    if args.disable_cortana:
         disable_cortana_service()
+
+    if args.uninstall_bloatware:
+        parser = ApplicationsListParser()
+        parser.uninstall_bloatware_apps()
 
     return 0
 
