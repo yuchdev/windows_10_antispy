@@ -82,8 +82,8 @@ in absolutely working state, because there are no really useful applications the
 Your preferences may be different than mine, so you may want to choose which Metro applications to uninstall 
 and which to keep using. Here you need to perform two steps.
 
-First, run the script with the key, listing all Metro applications, and redirect its output to file
-`windows_10_antispy.py --list-bloatware > metro_apps.txt`
+First, run the script with the key `windows_10_antispy.py --list-bloatware > metro_apps.txt`, 
+listing all Metro applications, and redirect its output to file
 
 You will find the list something like provided it above, but a bit longer. You can edit the file `metro_apps.txt`,
 **leaving** applications which you want to uninstall, and **deleting** which you want to keep using.
