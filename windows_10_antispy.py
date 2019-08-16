@@ -5,6 +5,7 @@ import logging
 import log_helper
 import subprocess
 import psutil
+import getpass
 
 logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
 
@@ -13,11 +14,64 @@ We use PowerShell for most of operations. Python provides convenient wrapper for
 """
 POWERSHELL_COMMAND = r'C:\WINDOWS\system32\WindowsPowerShell\v1.0\powershell.exe'
 
+"""
+Disable Cortana by killing the process and renaming Cortana directory in SystemApps
+so that RintimeBroker did not start it again
+"""
+
+
+def find_cortana_directory(name, path):
+    """
+    :param name: Name of Cortana executable
+    :param path: Path to Windows Store applications directory
+    :return: Path to the directory contains Cortana
+    """
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return root
+
+
+def disable_cortana_service():
+    cortana_directory = find_cortana_directory("SearchUI.exe", "C:\\Windows\\SystemApps")
+    logger.info("Cortana found at path %s" % cortana_directory)
+
+    for p in psutil.process_iter():
+        # Kill auxiliary processes
+        if p.name() in ["ActionUriServer.exe",
+                        "PlacesServer.exe",
+                        "backgroundTaskHost.exe",
+                        "RemindersServer.exe",
+                        "RemindersShareTargetApp.exe"]:
+            cortana_path = p.exe()
+            logger.info("Auxiliary process found at path {0}, PID={1}".format(cortana_path, p.pid))
+            p.kill()
+
+        if p.name() == "SearchUI.exe":
+            # Kill Cortana processes
+            cortana_path = p.exe()
+            logger.info("Cortana process run at path {0}, PID={1}".format(cortana_path, p.pid))
+
+            cortana_directory, _ = os.path.split(cortana_path)
+            logger.debug("Cortana directory %s" % cortana_directory)
+            p.kill()
+            p.wait()
+
+    # make it never rub again
+    new_cortana_directory = cortana_directory + "_cortana_backup"
+    os.rename(cortana_directory, new_cortana_directory)
+    logger.debug("New Cortana directory %s" % new_cortana_directory)
+
 
 class DisableTelemetry:
     """
     Disable Telemetry services, scheduled tasks and traffic to MS Telemetry servers
     """
+
+    def __init__(self):
+        """
+        Stub init for static analyzer
+        """
+        pass
 
     """
     Map human-readable service names to system name.
@@ -213,55 +267,6 @@ class DisableTelemetry:
         logger.info("All traffic to MS Telemetry servers disabled")
 
 
-class DisableCotrana:
-    """
-    Disable Cortana by killing the process and renaming Cortana directory in SystemApps
-    so that RintimeBrocker did not start it again
-    """
-
-    @staticmethod
-    def find_cortana_directory(name, path):
-        """
-        :param name: Name of Cortana executable
-        :param path: Path to Windows Store applications directory
-        :return: Path to the directory contains Cortana
-        """
-        for root, dirs, files in os.walk(path):
-            if name in files:
-                return root
-
-    @staticmethod
-    def disable_cortana_service():
-        cortana_directory = DisableCotrana.find_cortana_directory("SearchUI.exe", "C:\\Windows\\SystemApps")
-        logger.info("Cortana found at path %s" % cortana_directory)
-
-        for p in psutil.process_iter():
-            # Kill auxiliary processes
-            if p.name() in ["ActionUriServer.exe",
-                            "PlacesServer.exe",
-                            "backgroundTaskHost.exe",
-                            "RemindersServer.exe",
-                            "RemindersShareTargetApp.exe"]:
-                cortana_path = p.exe()
-                logger.info("Auxiliary process found at path {0}, PID={1}".format(cortana_path, p.pid))
-                p.kill()
-
-            if p.name() == "SearchUI.exe":
-                # Kill Cortana processes
-                cortana_path = p.exe()
-                logger.info("Cortana process run at path {0}, PID={1}".format(cortana_path, p.pid))
-
-                cortana_directory, _ = os.path.split(cortana_path)
-                logger.debug("Cortana directory %s" % cortana_directory)
-                p.kill()
-                p.wait()
-
-        # make it never rub again
-        new_cortana_directory = cortana_directory + "_cortana_backup"
-        os.rename(cortana_directory, new_cortana_directory)
-        logger.debug("New Cortana directory %s" % new_cortana_directory)
-
-
 class ApplicationsListParser:
     """
     List, parse and uninstall Metro applications
@@ -317,7 +322,7 @@ class ApplicationsListParser:
     KEY = 0
     VALUE = 1
 
-    def __init__(self):
+    def __init__(self, current_user):
         """
         On creating the object we read and parse all Metro applications
         self.output_cache is used for saving PowerShell output stream
@@ -327,7 +332,7 @@ class ApplicationsListParser:
         """
         self.output_cache = []
         self.applications_list = {}
-        self.__read_bloatware_apps()
+        self.__read_bloatware_apps(current_user)
 
     def __push_application(self):
         """
@@ -344,7 +349,8 @@ class ApplicationsListParser:
         Parse a single string from PowerShell output
         Normally it has simple format Key:Value
         We don't need them all only "Name" and "PackageFullName"
-        :param output: String in {Key:Valueformat}
+        :param output: String in "Key:Value" format
+        Empty string means end of a single application properties list
         """
         if output == "":
             self.__push_application()
@@ -358,13 +364,13 @@ class ApplicationsListParser:
         """
         Run the PowerShell command
         Get-AppXPackage -User %current_user%
-        Iutput has format
+        Input has a format like that:
         Name : Microsoft.Advertising.Xaml
         Publisher : CN=Microsoft Corporation
         Architecture : X86
         Version : 10.1811.1.0
         ...
-        We strip /r/n sympols, skip all whitespaces and decode output to UTF-8
+        We strip /r/n symbols, skip all whitespaces and decode output to UTF-8
         before passing the string to parser
         """
         process = subprocess.Popen([POWERSHELL_COMMAND, '-ExecutionPolicy', 'Unrestricted',
@@ -403,6 +409,7 @@ class ApplicationsListParser:
     def uninstall_bloatware_apps(self, uninstall_list):
         """
         Uninstall either default or user-defined set of applications
+        :param uninstall_list:
         """
         if len(uninstall_list) == 0:
             uninstall_list = DEFAULT_REMOVE_UWP
@@ -410,6 +417,17 @@ class ApplicationsListParser:
         for app_readable_name, app_full_name in self.applications_list.items():
             if app_readable_name in uninstall_list:
                 self.__uninstall_metro_app(app_readable_name, app_full_name)
+
+    @staticmethod
+    def read_from_file(applications_file):
+        """
+        :param applications_file: File with newline-separated applications list
+        :return: list of services with stripped newlines and skipped empty strings
+        """
+        with open(applications_file) as f:
+            content = f.readlines()
+        # remove whitespace characters like `\n` at the end of each line
+        return [x.strip() for x in content if x]
 
 
 def main():
@@ -431,8 +449,8 @@ def main():
                         "Windows Image Acquisition"]
 
     parser = argparse.ArgumentParser(description='Command-line params')
-    parser.add_argument('--stop-services',
-                        help='Stop services and tasks, providing private data transfer to Microsoft',
+    parser.add_argument('--disable-telemetry',
+                        help='Stop services and scheduled tasks, providing private data transfer to Microsoft',
                         action='store_true',
                         default="",
                         required=False)
@@ -454,10 +472,24 @@ def main():
                         action='store_true',
                         default=False,
                         required=False)
+    parser.add_argument('--list-bloatware',
+                        help='List all installed UWP Windows Metro applications, so that you can choose '
+                             'what to uninstall and what to leave. If you are not sure, leave the application',
+                        action='store_true',
+                        default=False,
+                        required=False)
+    parser.add_argument('--uninstall-from-file',
+                        help='Redirecting output from the script with the --list-bloatware key you can create a file'
+                             'with the list of applications to uninstall',
+                        dest='applications_file',
+                        default=False,
+                        required=False)
 
     args = parser.parse_args()
+    current_user = getpass.getuser()
+    logger.info("Current user %s" % current_user)
 
-    if args.stop_services:
+    if args.disable_telemetry:
         services_list = default_services
         disable_services(services_list)
         disable_tasks(TASKS)
@@ -470,8 +502,20 @@ def main():
         disable_cortana_service()
 
     if args.uninstall_bloatware:
-        parser = ApplicationsListParser()
-        parser.uninstall_bloatware_apps()
+        parser = ApplicationsListParser(current_user)
+        parser.uninstall_bloatware_apps([])
+
+    if args.list_bloatware:
+        parser = ApplicationsListParser(current_user)
+        parser.list_bloatware_apps()
+
+    if args.applications_file:
+        uninstall_from_file = args.applications_file
+        logger.info("Reading applications list from file %s" % uninstall_from_file)
+        if not os.path.isfile(uninstall_from_file):
+            logger.warning("File %s does not exist" % uninstall_from_file)
+        parser = ApplicationsListParser(current_user)
+        parser.uninstall_bloatware_apps(uninstall_from_file)
 
     return 0
 
