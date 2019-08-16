@@ -77,7 +77,7 @@ in absolutely working state, because there are no really useful applications the
 * WindowsCalculator
 * Microsoft3DViewer
 
-### Choose what Metro applications to uninstall
+### Choose which Metro applications to uninstall
 
 Your preferences may be different than mine, so you may want to choose which Metro applications to uninstall 
 and which to keep using. Here you need to perform two steps.
