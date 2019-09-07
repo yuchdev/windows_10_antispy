@@ -491,12 +491,12 @@ def main():
 
     if args.disable_telemetry:
         services_list = default_services
-        disable_services(services_list)
-        disable_tasks(TASKS)
+        DisableTelemetry.disable_services(services_list)
+        DisableTelemetry.disable_tasks(DisableTelemetry.TASKS)
 
     if args.block_telemetry_traffic:
-        take_file_ownership()
-        disable_telemetry_traffic()
+        DisableTelemetry.take_file_ownership()
+        DisableTelemetry.disable_telemetry_traffic()
 
     if args.disable_cortana:
         disable_cortana_service()
