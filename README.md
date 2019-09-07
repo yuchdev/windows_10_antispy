@@ -9,7 +9,7 @@ Current version performs following cleanups:
 * Remove any Metro bloatware
 
 ## Pre-requisites
-* You must have Python 3.4+ installed (last version preferred)
+* You must have Python version 3.4+ installed, however last version always recommended:
 https://www.python.org/downloads/
 * You should install `psutil` Python module before running the application: 
 `pip3 install psutil`
