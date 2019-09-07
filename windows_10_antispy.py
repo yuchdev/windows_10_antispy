@@ -355,10 +355,10 @@ class ApplicationsListParser:
         if output == "":
             self.__push_application()
         string_pair = output.split(':', 2)
-        if string_pair[KEY] == "Name":
-            self.output_cache.append(string_pair[VALUE])
-        if string_pair[KEY] == "PackageFullName":
-            self.output_cache.append(string_pair[VALUE])
+        if string_pair[ApplicationsListParser.KEY] == "Name":
+            self.output_cache.append(string_pair[ApplicationsListParser.VALUE])
+        if string_pair[ApplicationsListParser.KEY] == "PackageFullName":
+            self.output_cache.append(string_pair[ApplicationsListParser.VALUE])
 
     def __read_bloatware_apps(self, current_user):
         """

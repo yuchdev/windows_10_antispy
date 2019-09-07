@@ -16,10 +16,10 @@ Application works from the command line and requires Administrator privileges.
 `pip3 install psutil`
 
 ## Disable Telemetry
-Calling the script with the key `windows_10_antispy.py --disable-telemetry` disables services and policies related to MS 
+Calling the script with the key `python windows_10_antispy.py --disable-telemetry` disables services and policies related to MS 
 Telemetry, and also disables Scheduler tasks starting Telemetry-related applications and services
 
-If it's not enough for you, you can `windows_10_antispy.py --block-telemetry-traffic`. This effectively blocks all traffic 
+If it's not enough for you, you can `python windows_10_antispy.py --block-telemetry-traffic`. This effectively blocks all traffic 
 to all known MS Telemetry-related services. 
 I should notice, MS insists that these changes may harm your system, 
 however testing shows no any problem with Windows work.
@@ -30,7 +30,7 @@ or write insane amount of some data to your disk.
 Simply stopping the Cotrana process through the Task Manager does not help much, 
 Runtime Broker, manager of Metro applications, would start it again in 1-2 seconds.
 
-However, running  `windows_10_antispy.py --disable-cortana` makes it stop forever by renaming the directory, 
+However, running  `python windows_10_antispy.py --disable-cortana` makes it stop forever by renaming the directory, 
 containing Cortana executable before Runtime Broker starts it again.
 
 ## Remove Metro bloatware
@@ -38,7 +38,7 @@ Windows 10 comes with insanely irritating amount of applications, from games to 
 and without any chance to decline its during the system installation. Luckily, the script offers several options, which help you to get rid of any of them, in fact all of them if you feel that need.
 
 ### Uninstall "default list"
-Running the script with the key `windows_10_antispy.py --uninstall-bloatware` performs uninstalling of some reasonable 
+Running the script with the key `python windows_10_antispy.py --uninstall-bloatware` performs uninstalling of some reasonable 
 "default" set of Metro applications, releasing some amount of your disk drive and leaves the system 
 in absolutely working state, because there are no really useful applications there. Here's the list:
 
@@ -89,11 +89,11 @@ in absolutely working state, because there are no really useful applications the
 Your preferences may be different than mine, so you may want to choose which Metro applications to uninstall 
 and which to keep using. Here you need to perform two steps.
 
-First, run the script with the key `windows_10_antispy.py --list-bloatware > metro_apps.txt`, 
+First, run the script with the key `python windows_10_antispy.py --list-bloatware > metro_apps.txt`, 
 listing all Metro applications, and redirect its output to file
 
 You will find the list something like provided it above, but a bit longer. You can edit the file `metro_apps.txt`,
 **leaving** applications which you want to uninstall, and **deleting** which you want to keep using.
 
 After you finished with the file, you can run the script providing the file name with the key 
-`windows_10_antispy.py --uninstall-from-file metro_apps.txt` and enjoy your cleaned up Windows 10
+`python windows_10_antispy.py --uninstall-from-file metro_apps.txt` and enjoy your cleaned up Windows 10
