@@ -1,5 +1,5 @@
 # Yet another Windows 10 pocket antispy script
-***Helps you to get rid of all Windows 10 bloatware and resolve privacy issues***
+***Helps you to get rid of all Windows 10 bloatware and disable MS spying tools***
 
 Current version performs following cleanups:
 * Disable all Telemetry and data-collecting services in Service Control Manager
