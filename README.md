@@ -8,6 +8,12 @@ Current version performs following cleanups:
 * Disable Cortana
 * Remove any Metro bloatware
 
+## Pre-requisites
+* You must have Python 3.4+ installed (last version preferred)
+https://www.python.org/downloads/
+* You should install `psutil` Python module before running the application: 
+`pip3 install psutil`
+
 ## Disable Telemetry
 Calling the script with the key `windows_10_antispy.py --disable-telemetry` disables services and policies related to MS 
 Telemetry, and also disables Scheduler tasks starting Telemetry-related applications and services
