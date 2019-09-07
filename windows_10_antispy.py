@@ -412,7 +412,7 @@ class ApplicationsListParser:
         :param uninstall_list:
         """
         if len(uninstall_list) == 0:
-            uninstall_list = DEFAULT_REMOVE_UWP
+            uninstall_list = ApplicationsListParser.DEFAULT_REMOVE_UWP
 
         for app_readable_name, app_full_name in self.applications_list.items():
             if app_readable_name in uninstall_list:
