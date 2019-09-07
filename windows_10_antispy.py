@@ -404,7 +404,7 @@ class ApplicationsListParser:
                           'Remove-AppxPackage', '"{0}"'.format(app_full_name)],
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
-        logger.info('Application "{0}" uninstalled'.format(app_readable_name))
+        logger.info('Application "{0}" uninstall initiated'.format(app_readable_name))
 
     def uninstall_bloatware_apps(self, uninstall_list):
         """
@@ -412,7 +412,10 @@ class ApplicationsListParser:
         :param uninstall_list:
         """
         if len(uninstall_list) == 0:
+            logger.info("Specific list of bloatware is not provided, remove default list")
             uninstall_list = ApplicationsListParser.DEFAULT_REMOVE_UWP
+        
+        logger.debug('We want to remove the following bloatware: "{0}"'.format(uninstall_list))
 
         for app_readable_name, app_full_name in self.applications_list.items():
             if app_readable_name in uninstall_list:
@@ -515,7 +518,8 @@ def main():
         if not os.path.isfile(uninstall_from_file):
             logger.warning("File %s does not exist" % uninstall_from_file)
         parser = ApplicationsListParser(current_user)
-        parser.uninstall_bloatware_apps(uninstall_from_file)
+        uninstall_list = ApplicationsListParser.read_from_file(uninstall_from_file)
+        parser.uninstall_bloatware_apps(uninstall_list)
 
     return 0
 
