@@ -8,6 +8,8 @@ Current version performs following cleanups:
 * Disable Cortana
 * Remove any Metro bloatware
 
+Application works from the command line and requires Administrator privileges.
+
 ## Pre-requisites
 * You must have Python version 3.4+ installed, however [last version](https://www.python.org/downloads/) always recommended
 * You should install `psutil` Python module before running the application: 
