@@ -272,7 +272,12 @@ class ApplicationsListParser:
     List, parse and uninstall Metro applications
     """
 
-    """List of Windows Metro applications to uninstall (edit it to adjust your preferences)"""
+    """
+    List of Windows Metro applications to uninstall (edit it to adjust your preferences)
+    See description of default Provisioned Windows applications:
+    https://docs.microsoft.com/en-us/windows/application-management/apps-in-windows-10
+    """
+
     DEFAULT_REMOVE_UWP = [
         'Microsoft.MicrosoftEdge',
         'Microsoft.Windows.ContentDeliveryManager',
