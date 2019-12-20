@@ -7,7 +7,7 @@ import subprocess
 import psutil
 import getpass
 
-logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=True)
+logger = log_helper.setup_logger(name="win10_cleaner", level=logging.DEBUG, log_to_file=False)
 
 """
 We use PowerShell for most of operations. Python provides convenient wrapper for its output
